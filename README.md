@@ -1,6 +1,6 @@
 # poc-data
 
-## Mermaid Code
+## Mermaid Code: Same data different source
 
 ```mermaid
 flowchart TD
@@ -36,7 +36,7 @@ G3 --> G
 ## Examples
 
 ### Database
-```
+```sql
 id | name            | email                | signup_date                | active | purchases
 ---+-----------------+----------------------+----------------------------+--------+---------
 1  | Luiz Gabriel    | luiz@email.com       | 2023-05-10 14:25:00        | true   | 1530.75
@@ -84,3 +84,62 @@ id;name;email;signup_date;active;purchases
 
 ```
 
+### MERMAI
+
+```mermaid
+flowchart TD
+
+subgraph Sources
+    A1[(DB Users Core)]
+    A2[(API Emails)]
+    A3[(CSV Purchases 1TB)]
+    A4[(DB Signup)]
+    A5[(API Status)]
+end
+
+subgraph RequestManager
+    B1[Batch Requests]
+    B2[Parallel Workers]
+    B3[Rate Limiter]
+    B4[Retry Handler]
+end
+
+%% DB sources go directly
+A1 --> E1[Extract ID and Name]
+A4 --> E4[Extract Signup Date]
+
+%% API sources through Request Manager
+A2 --> B1 --> B2 --> B3 --> B4 --> E2[Extract Email]
+A5 --> B1 --> B2 --> B3 --> B4 --> E5[Extract Active]
+
+%% CSV 1TB distributed flow
+A3 --> R1[Distributed CSV Reader]
+R1 --> R2[Parallel Chunk Parser]
+R2 --> R3[Convert to Parquet Partitions]
+R3 --> E3[Load Purchases Table]
+
+subgraph Transform
+    T1[Normalize Names Fix Types Dedup]
+    T2[Validate Email Normalize Domain]
+    T3[Clean Purchases Fix Types Normalize]
+    T4[Standardize Dates Fix Timezone]
+    T5[Convert Boolean Handle Missing]
+end
+
+E1 --> T1
+E2 --> T2
+E3 --> T3
+E4 --> T4
+E5 --> T5
+
+T1 --> U[Join by User ID]
+T2 --> U
+T3 --> U
+T4 --> U
+T5 --> U
+
+U --> A[Aggregate Purchases]
+
+A --> F[Save Final Table Parquet]
+
+```
